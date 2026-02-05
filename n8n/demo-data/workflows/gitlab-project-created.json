@@ -1,0 +1,103 @@
+{
+  "name": "GitLab → Feedback-Hub",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gitlab-system-hook",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "gitlab-system-hook",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Iv1at78vEOpE1gcq",
+          "name": "GitLab Webhook Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{
+            "id": "c1",
+            "leftValue": "={{ $json.body.event_name }}",
+            "rightValue": "project_create",
+            "operator": { "type": "string", "operation": "equals" }
+          }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-1",
+      "name": "Is Project Create?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8008/api/v1/projects/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.body.name, slug: $json.body.path, gitlab_repo_url: \"http://turbo.turbo.bruens.it:8180/\" + $json.body.path_with_namespace, description: \"Auto-registered from GitLab. Namespace: \" + $json.body.path_with_namespace + \". Visibility: \" + ($json.body.project_visibility || \"unknown\") + \". Owner: \" + ($json.body.owner_name || \"unknown\") + \".\" }) }}",
+        "options": {}
+      },
+      "id": "http-1",
+      "name": "Create in Feedback-Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "nk3ZRln1SUmgB9aH",
+          "name": "Feedback-Hub API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "status", "value": "ignored" },
+            { "name": "reason", "value": "not a project_create event" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-ignore",
+      "name": "Ignored",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [660, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Is Project Create?", "type": "main", "index": 0 }]]
+    },
+    "Is Project Create?": {
+      "main": [
+        [{ "node": "Create in Feedback-Hub", "type": "main", "index": 0 }],
+        [{ "node": "Ignored", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "meta": {},
+  "pinData": {},
+  "triggerCount": 1,
+  "tags": []
+}

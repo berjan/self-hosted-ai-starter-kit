@@ -8,7 +8,7 @@ networks:
   demo:
 
 x-n8n: &service-n8n
-  image: n8nio/n8n:latest
+  image: n8nio/n8n:2.6.3
   networks: ['demo']
   environment:
     - DB_TYPE=postgresdb
@@ -90,6 +90,8 @@ services:
     hostname: n8n
     container_name: n8n
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - 5678:5678
     volumes:
